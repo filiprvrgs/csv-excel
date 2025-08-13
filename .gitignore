@@ -1,0 +1,35 @@
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.log
+
+# Arquivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Arquivos de backup
+*.bak
+*.backup
+
+# Arquivos de cache
+.cache/
+node_modules/
+
+# Arquivos de configuração local
+.env
+.env.local
+
+# Arquivos de exportação temporários
+export_*.csv
+export_*.tsv
+
+# Arquivos de teste
+test_*.csv
+temp_*.csv

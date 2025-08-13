@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Excel - Analisador de Dados</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="excel-container">
+        <!-- Toolbar -->
+        <div class="excel-toolbar">
+            <button class="excel-btn" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-folder-open"></i> Abrir
+            </button>
+            <button class="excel-btn" onclick="toggleFilterBar()">
+                <i class="fas fa-filter"></i> Filtros
+            </button>
+            <button class="excel-btn" onclick="exportToCSV()">
+                <i class="fas fa-download"></i> Exportar
+            </button>
+            <button class="excel-btn" onclick="clearFilters()">
+                <i class="fas fa-times"></i> Limpar
+            </button>
+            <span id="fileInfo"></span>
+        </div>
+
+        <!-- Barra de Filtros -->
+        <div id="filterBar" class="filter-bar">
+            <div id="filterContainer" class="filter-container">
+                <!-- Filtros serão criados dinamicamente aqui -->
+            </div>
+        </div>
+
+        <!-- Área de Upload -->
+        <div id="uploadArea" class="upload-area">
+            <h1>📊 CSV Excel</h1>
+            <p>Analisador de Dados Inteligente</p>
+            <div class="upload-box" id="uploadBox">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <div class="upload-text">Arraste e solte seu arquivo CSV aqui</div>
+                <div class="upload-hint">ou clique para selecionar</div>
+            </div>
+            <input type="file" id="fileInput" accept=".csv" style="display: none;">
+        </div>
+
+        <!-- Área da Planilha -->
+        <div id="excelSheet" class="excel-sheet" style="display: none;">
+            <div class="scroll-container">
+                <table class="excel-table">
+                    <thead>
+                        <tr id="tableHeader">
+                            <!-- Cabeçalhos serão criados dinamicamente aqui -->
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Dados serão criados dinamicamente aqui -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Barra de Status -->
+        <div id="statusBar" class="status-bar" style="display: none;">
+            <span id="cellInfo"></span>
+            <span id="filteredCount">Mostrando: 0</span>
+            <span id="totalCount">Total: 0</span>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="loading">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <div>Carregando dados...</div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

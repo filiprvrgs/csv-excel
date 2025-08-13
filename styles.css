@@ -1,0 +1,657 @@
+/* Reset e configurações básicas */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #1a1a1a;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+}
+
+/* Container principal */
+.excel-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    border-radius: 0;
+    overflow: hidden;
+}
+
+/* Toolbar */
+.excel-toolbar {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 3px solid #3498db;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+}
+
+.excel-btn {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.excel-btn:hover {
+    background: linear-gradient(135deg, #2980b9 0%, #1f5f8b 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+}
+
+.excel-btn:active {
+    transform: translateY(0);
+}
+
+#fileInfo {
+    color: #ecf0f1;
+    font-size: 14px;
+    font-weight: 500;
+    margin-left: auto;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+/* Área de upload */
+.upload-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+    padding: 40px;
+    position: relative;
+}
+
+.upload-area::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+    opacity: 0.3;
+}
+
+.upload-area h1 {
+    font-size: 3.5rem;
+    margin-bottom: 20px;
+    font-weight: 800;
+    color: white;
+    letter-spacing: -0.02em;
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    position: relative;
+    z-index: 1;
+}
+
+.upload-area p {
+    font-size: 1.25rem;
+    margin-bottom: 40px;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 400;
+    max-width: 600px;
+    position: relative;
+    z-index: 1;
+}
+
+.upload-box {
+    border: 3px dashed rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    padding: 60px 40px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    transition: all 0.4s ease;
+    cursor: pointer;
+    max-width: 500px;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+}
+
+.upload-box:hover {
+    border-color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.upload-box.dragover {
+    border-color: #3498db;
+    background: rgba(52, 152, 219, 0.2);
+    transform: scale(1.05);
+    box-shadow: 0 25px 50px rgba(52, 152, 219, 0.3);
+}
+
+.upload-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: rgba(255, 255, 255, 0.9);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.upload-text {
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+    font-weight: 700;
+    color: white;
+}
+
+.upload-hint {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 400;
+}
+
+/* Barra de filtros */
+.filter-bar {
+    background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+    padding: 20px 24px;
+    border-bottom: 2px solid #3498db;
+    flex-shrink: 0;
+    min-height: 160px;
+    max-height: 300px;
+    overflow: visible;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 200;
+}
+
+.filter-container {
+    display: flex;
+    gap: 16px;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 12px;
+    max-width: 100%;
+    position: relative;
+    z-index: 201;
+    min-height: 120px;
+}
+
+.filter-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.filter-container::-webkit-scrollbar-track {
+    background: rgba(189, 195, 199, 0.3);
+    border-radius: 4px;
+}
+
+.filter-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    border-radius: 4px;
+}
+
+.filter-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #2980b9, #1f5f8b);
+}
+
+.filter-item {
+    background: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 2px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 200px;
+    min-height: 120px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: visible;
+    z-index: 202;
+    margin-bottom: 10px;
+    justify-content: flex-start;
+}
+
+.filter-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3498db, #2980b9);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.filter-item:hover::before {
+    transform: scaleX(1);
+}
+
+.filter-item:hover {
+    border-color: #3498db;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
+    z-index: 203;
+}
+
+.filter-item.hidden-filter {
+    display: none;
+}
+
+.filter-item.expand-button {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    height: auto;
+    justify-content: center;
+    align-items: center;
+}
+
+.filter-item.expand-button:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.filter-item label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #2c3e50;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.filter-item input,
+.filter-item select {
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    min-width: 100px;
+    max-width: 120px;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+    font-family: inherit;
+    font-weight: 500;
+    flex-shrink: 0;
+    margin-bottom: 8px;
+}
+
+.filter-item input:focus,
+.filter-item select:focus {
+    outline: none;
+    border-color: #3498db;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1);
+}
+
+.filter-type {
+    font-size: 0.75rem;
+    color: #7f8c8d;
+    background: linear-gradient(135deg, #ecf0f1, #bdc3c7);
+    padding: 6px 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    font-weight: 600;
+    text-align: center;
+    font-family: inherit;
+    border: 1px solid #bdc3c7;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+/* Área da planilha */
+.excel-sheet {
+    flex: 1;
+    overflow: auto;
+    background: white;
+    position: relative;
+    min-height: 0;
+    z-index: 1;
+}
+
+.scroll-container {
+    overflow: auto;
+    height: 100%;
+}
+
+.excel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    background: white;
+    font-family: inherit;
+}
+
+.excel-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    color: white;
+}
+
+.excel-table th {
+    padding: 14px 18px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border-bottom: 3px solid #3498db;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    color: white;
+    letter-spacing: 0.5px;
+}
+
+.excel-table th:hover {
+    background: rgba(52, 152, 219, 0.2);
+}
+
+.excel-table th:last-child {
+    border-right: none;
+}
+
+.excel-table td {
+    padding: 12px 18px;
+    border-bottom: 1px solid #ecf0f1;
+    border-right: 1px solid #ecf0f1;
+    font-size: 0.9rem;
+    transition: background 0.2s ease;
+    font-family: inherit;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.excel-table td:hover {
+    background: rgba(52, 152, 219, 0.05);
+}
+
+.excel-table tr:hover {
+    background: rgba(52, 152, 219, 0.02);
+}
+
+.excel-table tbody tr:nth-child(even) {
+    background: rgba(236, 240, 241, 0.5);
+}
+
+/* Célula selecionada */
+.selected {
+    background: linear-gradient(135deg, #3498db, #2980b9) !important;
+    color: white !important;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.3);
+    font-weight: 600 !important;
+}
+
+/* Estilos específicos para tipos de dados */
+.cell-number {
+    text-align: right;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-weight: 600;
+    color: #27ae60;
+    font-size: 0.9rem;
+}
+
+.cell-date {
+    color: #e74c3c;
+    font-weight: 600;
+    text-align: center;
+}
+
+.cell-boolean {
+    text-align: center;
+    font-weight: 700;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+.cell-boolean.true {
+    background: rgba(39, 174, 96, 0.1);
+    color: #27ae60;
+    border: 2px solid rgba(39, 174, 96, 0.3);
+}
+
+.cell-boolean.false {
+    background: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+    border: 2px solid rgba(231, 76, 60, 0.3);
+}
+
+/* Barra de status */
+.status-bar {
+    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+    color: white;
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    font-family: inherit;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 100;
+}
+
+.status-bar span {
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-weight: 500;
+}
+
+/* Loading */
+.loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
+
+.loading-content {
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    font-family: inherit;
+    font-weight: 600;
+    color: #2c3e50;
+    border: 1px solid #e0e0e0;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #ecf0f1;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .excel-toolbar {
+        padding: 12px 16px;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .excel-btn {
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+    
+    .upload-area h1 {
+        font-size: 2.5rem;
+    }
+    
+    .upload-box {
+        padding: 40px 30px;
+    }
+    
+    .filter-item {
+        min-width: 180px;
+        padding: 14px 16px;
+    }
+    
+    .filter-item label {
+        font-size: 0.8rem;
+    }
+    
+    .filter-item input,
+    .filter-item select {
+        font-size: 0.8rem;
+        min-width: 80px;
+        max-width: 100px;
+    }
+    
+    .excel-table {
+        font-size: 0.8rem;
+    }
+    
+    .excel-table th,
+    .excel-table td {
+        padding: 10px 14px;
+    }
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.excel-sheet {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Melhorias para botões especiais */
+.expand-button button {
+    background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 18px !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3) !important;
+    font-family: inherit !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    position: relative !important;
+    z-index: 60 !important;
+}
+
+.expand-button button:hover {
+    background: linear-gradient(135deg, #c0392b, #a93226) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4) !important;
+}
+
+/* Tooltip personalizado */
+.cell-tooltip {
+    position: relative;
+}
+
+.cell-tooltip:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(44, 62, 80, 0.95);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    font-family: inherit;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Scrollbars personalizadas para a planilha */
+.scroll-container::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+.scroll-container::-webkit-scrollbar-track {
+    background: #ecf0f1;
+    border-radius: 6px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    border-radius: 6px;
+    border: 2px solid #ecf0f1;
+}
+
+.scroll-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #2980b9, #1f5f8b);
+}

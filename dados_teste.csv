@@ -1,0 +1,16 @@
+Produto	Categoria	Preco	Estoque	Disponivel	Data_Entrada	Fornecedor	Avaliacao
+Notebook	Gaming	3500.00	15	true	2023-01-10	Dell	4.5
+Mouse	Gaming	150.00	50	true	2023-02-15	Logitech	4.2
+Teclado	Escritório	89.90	30	true	2023-01-20	Microsoft	3.8
+Monitor	Gaming	1200.00	8	false	2023-03-05	Samsung	4.7
+Headset	Gaming	299.00	25	true	2023-02-28	HyperX	4.1
+Webcam	Escritório	199.00	40	true	2023-01-15	Logitech	4.3
+SSD	Hardware	450.00	12	true	2023-03-10	Kingston	4.6
+Memória RAM	Hardware	280.00	35	true	2023-02-22	Corsair	4.4
+Placa de Vídeo	Gaming	2800.00	5	false	2023-03-15	NVIDIA	4.9
+Processador	Hardware	1200.00	18	true	2023-01-25	Intel	4.8
+Mousepad	Gaming	45.00	60	true	2023-02-10	SteelSeries	3.9
+Cabo HDMI	Acessórios	25.00	100	true	2023-01-30	Genérico	3.5
+Fonte	Hardware	350.00	22	true	2023-03-01	Corsair	4.2
+Cooler	Hardware	120.00	28	true	2023-02-05	Noctua	4.3
+Placa Mãe	Hardware	800.00	15	true	2023-01-18	ASUS	4.5

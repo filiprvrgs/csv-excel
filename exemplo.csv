@@ -1,0 +1,16 @@
+Nome	Idade	Cidade	Profissão	Salario	Ativo	Data_Cadastro	Departamento
+João Silva	25	São Paulo	Desenvolvedor	4500.50	true	2023-01-15	Tecnologia
+Maria Santos	30	Rio de Janeiro	Designer	3800.00	false	2023-02-20	Criativo
+Pedro Costa	28	Belo Horizonte	Analista	5200.75	true	2023-03-10	Financeiro
+Ana Oliveira	35	Porto Alegre	Gerente	7500.00	true	2023-01-25	Administração
+Carlos Ferreira	22	Curitiba	Estagiário	1800.00	true	2023-04-05	Tecnologia
+Lucia Mendes	29	Salvador	Designer	4200.00	false	2023-02-10	Criativo
+Roberto Lima	31	Fortaleza	Desenvolvedor	4800.25	true	2023-03-15	Tecnologia
+Fernanda Rocha	27	Recife	Analista	3900.00	true	2023-01-30	Financeiro
+Diego Alves	33	Manaus	Gerente	6800.00	false	2023-04-20	Administração
+Camila Souza	24	Brasília	Estagiário	2000.00	true	2023-02-28	Tecnologia
+Ricardo Nunes	36	Goiânia	Desenvolvedor	5500.00	true	2023-03-25	Tecnologia
+Patricia Lima	26	Campinas	Designer	4100.00	true	2023-01-10	Criativo
+Marcos Silva	32	Santos	Analista	4400.00	false	2023-04-12	Financeiro
+Juliana Costa	29	Uberlândia	Gerente	7200.00	true	2023-02-15	Administração
+Thiago Santos	23	João Pessoa	Estagiário	1900.00	true	2023-03-08	Tecnologia
