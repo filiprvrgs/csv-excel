@@ -1,4 +1,4 @@
-// Variáveis globais
+// Variáveis globais otimizadas
 let csvData = [];
 let headers = [];
 let filteredData = [];
@@ -8,6 +8,19 @@ let currentFile = null;
 let filtersExpanded = false;
 let filterBarVisible = true;
 
+// Variáveis para virtualização
+let visibleRows = 50; // Número de linhas visíveis
+let scrollTop = 0;
+let rowHeight = 40; // Altura estimada de cada linha
+let totalRows = 0;
+let startIndex = 0;
+let endIndex = 0;
+
+// Cache para otimização
+let filterCache = new Map();
+let columnIndexes = new Map();
+let debounceTimer = null;
+
 // Elementos DOM
 const fileInput = document.getElementById('fileInput');
 const uploadArea = document.getElementById('uploadArea');
@@ -15,10 +28,13 @@ const excelSheet = document.getElementById('excelSheet');
 const filterBar = document.getElementById('filterBar');
 const statusBar = document.getElementById('statusBar');
 const loading = document.getElementById('loading');
+const tableBody = document.getElementById('tableBody');
+const scrollContainer = document.querySelector('.scroll-container');
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
+    setupVirtualization();
 });
 
 function setupEventListeners() {
@@ -38,13 +54,25 @@ function setupEventListeners() {
     
     // Clique fora para desselecionar
     document.addEventListener('click', handleClickOutside);
+    
+    // Scroll para virtualização
+    if (scrollContainer) {
+        scrollContainer.addEventListener('scroll', handleScroll);
+    }
 }
 
-// Funções de upload
+function setupVirtualization() {
+    // Configurar altura do container para scroll virtual
+    if (tableBody) {
+        tableBody.style.position = 'relative';
+    }
+}
+
+// Funções de upload otimizadas
 function handleFileSelect(event) {
     const file = event.target.files[0];
     if (file) {
-        processFile(file);
+        processFileOptimized(file);
     } else {
         alert('Por favor, selecione um arquivo válido.');
     }
@@ -67,25 +95,167 @@ function handleDrop(event) {
     const files = event.dataTransfer.files;
     if (files.length > 0) {
         const file = files[0];
-        processFile(file);
+        processFileOptimized(file);
     }
 }
 
-// Processamento do arquivo
-function processFile(file) {
+// Processamento otimizado do arquivo
+function processFileOptimized(file) {
     showLoading();
     currentFile = file;
     
+    // Usar Web Worker para processamento em background
+    if (window.Worker) {
+        processWithWorker(file);
+    } else {
+        processWithMainThread(file);
+    }
+}
+
+function processWithWorker(file) {
+    const worker = new Worker(URL.createObjectURL(new Blob([`
+        // Web Worker para processamento CSV
+        self.onmessage = function(e) {
+            const { csvText, fileName } = e.data;
+            
+            try {
+                const result = parseCSVOptimized(csvText);
+                self.postMessage({ success: true, data: result });
+            } catch (error) {
+                self.postMessage({ success: false, error: error.message });
+            }
+        };
+        
+        function parseCSVOptimized(csvText) {
+            const normalizedText = csvText.replace(/\\r\\n/g, '\\n').replace(/\\r/g, '\\n');
+            const lines = normalizedText.split('\\n').filter(line => line.trim() !== '');
+            
+            if (lines.length === 0) {
+                throw new Error('Arquivo CSV vazio');
+            }
+            
+            if (lines.length === 1) {
+                throw new Error('Arquivo CSV contém apenas cabeçalhos');
+            }
+            
+            // Detectar separador
+            const firstLine = lines[0];
+            const tabCount = (firstLine.match(/\\t/g) || []).length;
+            const commaCount = (firstLine.match(/,/g) || []).length;
+            const separator = tabCount >= commaCount ? '\\t' : ',';
+            
+            // Parse headers
+            const headers = parseCSVLine(firstLine, separator);
+            
+            // Parse data em chunks para evitar bloqueio
+            const data = [];
+            const chunkSize = 1000;
+            
+            for (let i = 1; i < lines.length; i += chunkSize) {
+                const chunk = lines.slice(i, i + chunkSize);
+                
+                for (let j = 0; j < chunk.length; j++) {
+                    const lineIndex = i + j;
+                    const row = parseCSVLine(chunk[j], separator);
+                    
+                    if (row.length === headers.length) {
+                        const rowObj = {};
+                        headers.forEach((header, index) => {
+                            rowObj[header] = row[index] || '';
+                        });
+                        data.push(rowObj);
+                    } else if (Math.abs(row.length - headers.length) <= 2) {
+                        const rowObj = {};
+                        headers.forEach((header, index) => {
+                            rowObj[header] = row[index] || '';
+                        });
+                        data.push(rowObj);
+                    }
+                }
+                
+                // Reportar progresso
+                if (i % (chunkSize * 5) === 0) {
+                    self.postMessage({ 
+                        progress: true, 
+                        processed: Math.min(i + chunkSize, lines.length - 1),
+                        total: lines.length - 1 
+                    });
+                }
+            }
+            
+            return { headers, data };
+        }
+        
+        function parseCSVLine(line, separator) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === separator && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current.trim());
+            return result;
+        }
+    `], { type: 'application/javascript' })));
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        worker.postMessage({ csvText: e.target.result, fileName: file.name });
+    };
+    
+    worker.onmessage = function(e) {
+        if (e.data.progress) {
+            updateLoadingProgress(e.data.processed, e.data.total);
+        } else if (e.data.success) {
+            const { headers: parsedHeaders, data: parsedData } = e.data.data;
+            headers = parsedHeaders;
+            csvData = parsedData;
+            filteredData = [...csvData];
+            
+            displayFileInfo(file);
+            createFiltersOptimized();
+            setupVirtualization();
+            displayExcelTableOptimized();
+            hideLoading();
+            showExcelInterface();
+            
+            worker.terminate();
+        } else {
+            hideLoading();
+            alert('Erro ao processar o arquivo CSV: ' + e.data.error);
+            worker.terminate();
+        }
+    };
+    
+    reader.readAsText(file, 'UTF-8');
+}
+
+function processWithMainThread(file) {
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
             const csvText = e.target.result;
-            console.log('CSV Text length:', csvText.length);
-            console.log('CSV Text preview:', csvText.substring(0, 200));
-            parseCSV(csvText);
+            const result = parseCSVOptimized(csvText);
+            
+            headers = result.headers;
+            csvData = result.data;
+            filteredData = [...csvData];
+            
             displayFileInfo(file);
-            createFilters();
-            displayExcelTable();
+            createFiltersOptimized();
+            setupVirtualization();
+            displayExcelTableOptimized();
             hideLoading();
             showExcelInterface();
         } catch (error) {
@@ -98,96 +268,58 @@ function processFile(file) {
     reader.readAsText(file, 'UTF-8');
 }
 
-// Parse CSV - CORRIGIDO
-function parseCSV(csvText) {
-    console.log('=== INICIANDO PARSE CSV ===');
-    console.log('CSV Text completo:', csvText);
-    
-    // Remover caracteres de retorno de carro e normalizar quebras de linha
+function parseCSVOptimized(csvText) {
     const normalizedText = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    const lines = normalizedText.split('\n');
+    const lines = normalizedText.split('\n').filter(line => line.trim() !== '');
     
-    console.log('Total lines:', lines.length);
-    console.log('First line:', lines[0]);
-    console.log('Last line:', lines[lines.length - 1]);
-    
-    // Filtrar linhas vazias ou apenas espaços
-    const nonEmptyLines = lines.filter(line => line.trim() !== '');
-    console.log('Non-empty lines:', nonEmptyLines.length);
-    console.log('Non-empty lines content:', nonEmptyLines);
-    
-    if (nonEmptyLines.length === 0) {
+    if (lines.length === 0) {
         throw new Error('Arquivo CSV vazio');
     }
     
-    if (nonEmptyLines.length === 1) {
+    if (lines.length === 1) {
         throw new Error('Arquivo CSV contém apenas cabeçalhos');
     }
     
-    // Detectar separador (tab ou vírgula)
-    const firstLine = nonEmptyLines[0];
+    // Detectar separador
+    const firstLine = lines[0];
     const tabCount = (firstLine.match(/\t/g) || []).length;
     const commaCount = (firstLine.match(/,/g) || []).length;
-    
     const separator = tabCount >= commaCount ? '\t' : ',';
-    console.log('Detected separator:', separator === '\t' ? 'TAB' : 'COMMA');
-    console.log('Tab count:', tabCount, 'Comma count:', commaCount);
     
     // Parse headers
-    headers = parseCSVLine(nonEmptyLines[0], separator);
-    console.log('Headers:', headers);
-    console.log('Headers count:', headers.length);
+    const headers = parseCSVLine(firstLine, separator);
     
-    // Parse data
-    csvData = [];
-    for (let i = 1; i < nonEmptyLines.length; i++) {
-        const row = parseCSVLine(nonEmptyLines[i], separator);
-        console.log(`Row ${i}:`, row);
-        console.log(`Row ${i} length:`, row.length, 'Headers length:', headers.length);
+    // Parse data em chunks
+    const data = [];
+    const chunkSize = 1000;
+    
+    for (let i = 1; i < lines.length; i += chunkSize) {
+        const chunk = lines.slice(i, i + chunkSize);
         
-        if (row.length === headers.length) {
-            const rowObj = {};
-            headers.forEach((header, index) => {
-                rowObj[header] = row[index] || '';
-            });
-            csvData.push(rowObj);
-            console.log(`Row ${i} added successfully`);
-        } else {
-            console.warn(`Row ${i} has ${row.length} columns, expected ${headers.length}. Skipping.`);
-            console.warn(`Row content:`, nonEmptyLines[i]);
-            console.warn(`Row parsed:`, row);
+        for (let j = 0; j < chunk.length; j++) {
+            const lineIndex = i + j;
+            const row = parseCSVLine(chunk[j], separator);
             
-            // Tentar adicionar mesmo assim se a diferença for pequena
-            if (Math.abs(row.length - headers.length) <= 2) {
+            if (row.length === headers.length) {
                 const rowObj = {};
                 headers.forEach((header, index) => {
                     rowObj[header] = row[index] || '';
                 });
-                csvData.push(rowObj);
-                console.log(`Row ${i} added with padding`);
+                data.push(rowObj);
+            } else if (Math.abs(row.length - headers.length) <= 2) {
+                const rowObj = {};
+                headers.forEach((header, index) => {
+                    rowObj[header] = row[index] || '';
+                });
+                data.push(rowObj);
             }
         }
     }
     
-    console.log('Parsed data rows:', csvData.length);
-    console.log('First data row:', csvData[0]);
-    
-    if (csvData.length === 0) {
-        console.error('No data rows were parsed successfully!');
-        console.error('Headers:', headers);
-        console.error('All non-empty lines:', nonEmptyLines);
-        throw new Error('Nenhuma linha de dados foi processada com sucesso');
-    }
-    
-    console.log('=== PARSE CSV CONCLUÍDO ===');
-    filteredData = [...csvData];
+    return { headers, data };
 }
 
-// Parse linha CSV (suporta aspas e separadores dentro de campos)
-function parseCSVLine(line, separator = ',') {
-    console.log('Parsing line:', line);
-    console.log('Using separator:', separator === '\t' ? 'TAB' : 'COMMA');
-    
+function parseCSVLine(line, separator) {
     const result = [];
     let current = '';
     let inQuotes = false;
@@ -206,7 +338,6 @@ function parseCSVLine(line, separator = ',') {
     }
     
     result.push(current.trim());
-    console.log('Parsed result:', result);
     return result;
 }
 
@@ -226,13 +357,13 @@ function toggleFilterBar() {
     }
 }
 
-// Criar filtros automáticos - MELHORADO
-function createFilters() {
+// Criar filtros otimizados
+function createFiltersOptimized() {
     const filterContainer = document.getElementById('filterContainer');
     filterContainer.innerHTML = '';
     
     // Limitar número de filtros visíveis inicialmente
-    const maxVisibleFilters = 15;
+    const maxVisibleFilters = 10;
     const visibleHeaders = headers.slice(0, maxVisibleFilters);
     
     // Adicionar botão de expandir/colapsar se houver muitas colunas
@@ -249,17 +380,17 @@ function createFilters() {
     
     // Criar filtros visíveis
     visibleHeaders.forEach(header => {
-        const filterType = detectFilterType(header);
-        const filterElement = createFilterElement(header, filterType);
+        const filterType = detectFilterTypeOptimized(header);
+        const filterElement = createFilterElementOptimized(header, filterType);
         filterContainer.appendChild(filterElement);
     });
     
-    // Criar filtros ocultos (serão mostrados quando expandir)
+    // Criar filtros ocultos
     if (headers.length > maxVisibleFilters) {
         const hiddenHeaders = headers.slice(maxVisibleFilters);
         hiddenHeaders.forEach(header => {
-            const filterType = detectFilterType(header);
-            const filterElement = createFilterElement(header, filterType);
+            const filterType = detectFilterTypeOptimized(header);
+            const filterElement = createFilterElementOptimized(header, filterType);
             filterElement.style.display = 'none';
             filterElement.classList.add('hidden-filter');
             filterContainer.appendChild(filterElement);
@@ -267,67 +398,64 @@ function createFilters() {
     }
 }
 
-// Alternar visibilidade dos filtros
-function toggleFilters() {
-    const hiddenFilters = document.querySelectorAll('.hidden-filter');
-    const expandButton = document.querySelector('.expand-button button');
-    
-    if (filtersExpanded) {
-        // Colapsar
-        hiddenFilters.forEach(filter => filter.style.display = 'none');
-        expandButton.innerHTML = `<i class="fas fa-chevron-down"></i> Mostrar ${hiddenFilters.length} filtros mais`;
-        filtersExpanded = false;
-    } else {
-        // Expandir
-        hiddenFilters.forEach(filter => filter.style.display = 'flex');
-        expandButton.innerHTML = `<i class="fas fa-chevron-up"></i> Ocultar filtros extras`;
-        filtersExpanded = true;
+// Detectar tipo de filtro otimizado
+function detectFilterTypeOptimized(header) {
+    // Usar cache para evitar recálculos
+    if (filterCache.has(header)) {
+        return filterCache.get(header);
     }
-}
-
-// Detectar tipo de filtro baseado no conteúdo da coluna
-function detectFilterType(header) {
-    const columnData = csvData.map(row => row[header]).filter(val => val !== '');
     
-    if (columnData.length === 0) return 'text';
+    // Amostrar apenas uma parte dos dados para detecção rápida
+    const sampleSize = Math.min(1000, csvData.length);
+    const sampleData = csvData.slice(0, sampleSize).map(row => row[header]).filter(val => val !== '');
+    
+    if (sampleData.length === 0) {
+        filterCache.set(header, 'text');
+        return 'text';
+    }
     
     // Verificar se é numérico
-    const numericCount = columnData.filter(val => !isNaN(val) && val !== '').length;
-    if (numericCount / columnData.length > 0.8) {
+    const numericCount = sampleData.filter(val => !isNaN(val) && val !== '').length;
+    if (numericCount / sampleData.length > 0.8) {
+        filterCache.set(header, 'numeric');
         return 'numeric';
     }
     
     // Verificar se é data
-    const dateCount = columnData.filter(val => isValidDate(val)).length;
-    if (dateCount / columnData.length > 0.5) {
+    const dateCount = sampleData.filter(val => isValidDate(val)).length;
+    if (dateCount / sampleData.length > 0.5) {
+        filterCache.set(header, 'date');
         return 'date';
     }
     
     // Verificar se é booleano
     const booleanValues = ['true', 'false', 'sim', 'não', 'yes', 'no', '1', '0'];
-    const booleanCount = columnData.filter(val => 
+    const booleanCount = sampleData.filter(val => 
         booleanValues.includes(val.toLowerCase())
     ).length;
-    if (booleanCount / columnData.length > 0.8) {
+    if (booleanCount / sampleData.length > 0.8) {
+        filterCache.set(header, 'boolean');
         return 'boolean';
     }
     
-    // Verificar se tem valores únicos limitados (categoria)
-    const uniqueValues = [...new Set(columnData)];
+    // Verificar se tem valores únicos limitados
+    const uniqueValues = [...new Set(sampleData)];
     if (uniqueValues.length <= 20 && uniqueValues.length > 1) {
+        filterCache.set(header, 'category');
         return 'category';
     }
     
+    filterCache.set(header, 'text');
     return 'text';
 }
 
-// Criar elemento de filtro
-function createFilterElement(header, filterType) {
+// Criar elemento de filtro otimizado
+function createFilterElementOptimized(header, filterType) {
     const filterDiv = document.createElement('div');
     filterDiv.className = 'filter-item';
     
     const filterTypeLabel = getFilterTypeLabel(filterType);
-    const controls = createFilterControls(header, filterType);
+    const controls = createFilterControlsOptimized(header, filterType);
     
     filterDiv.innerHTML = `
         <label title="${header}">${header.length > 15 ? header.substring(0, 15) + '...' : header}:</label>
@@ -338,45 +466,35 @@ function createFilterElement(header, filterType) {
     return filterDiv;
 }
 
-// Obter label do tipo de filtro
-function getFilterTypeLabel(filterType) {
-    const labels = {
-        'text': 'Texto',
-        'numeric': 'Número',
-        'date': 'Data',
-        'boolean': 'Sim/Não',
-        'category': 'Categoria'
-    };
-    return labels[filterType] || 'Texto';
-}
-
-// Criar controles de filtro
-function createFilterControls(header, filterType) {
-    const columnData = csvData.map(row => row[header]).filter(val => val !== '');
+// Criar controles de filtro otimizados
+function createFilterControlsOptimized(header, filterType) {
+    // Amostrar dados para criar controles
+    const sampleSize = Math.min(500, csvData.length);
+    const sampleData = csvData.slice(0, sampleSize).map(row => row[header]).filter(val => val !== '');
     
     switch (filterType) {
         case 'numeric':
-            const numericValues = columnData.filter(val => !isNaN(val)).map(Number);
+            const numericValues = sampleData.filter(val => !isNaN(val)).map(Number);
             const min = Math.min(...numericValues);
             const max = Math.max(...numericValues);
             return `
                 <input type="number" placeholder="Min" min="${min}" max="${max}" 
-                       onchange="updateFilter('${header}', 'min', this.value)">
+                       onchange="updateFilterOptimized('${header}', 'min', this.value)">
                 <input type="number" placeholder="Max" min="${min}" max="${max}" 
-                       onchange="updateFilter('${header}', 'max', this.value)">
+                       onchange="updateFilterOptimized('${header}', 'max', this.value)">
             `;
             
         case 'date':
             return `
                 <input type="date" placeholder="Início" 
-                       onchange="updateFilter('${header}', 'start', this.value)">
+                       onchange="updateFilterOptimized('${header}', 'start', this.value)">
                 <input type="date" placeholder="Fim" 
-                       onchange="updateFilter('${header}', 'end', this.value)">
+                       onchange="updateFilterOptimized('${header}', 'end', this.value)">
             `;
             
         case 'boolean':
             return `
-                <select onchange="updateFilter('${header}', 'value', this.value)">
+                <select onchange="updateFilterOptimized('${header}', 'value', this.value)">
                     <option value="">Todos</option>
                     <option value="true">Sim</option>
                     <option value="false">Não</option>
@@ -384,12 +502,12 @@ function createFilterControls(header, filterType) {
             `;
             
         case 'category':
-            const uniqueValues = [...new Set(columnData)].sort();
-            const options = uniqueValues.map(val => 
+            const uniqueValues = [...new Set(sampleData)].sort();
+            const options = uniqueValues.slice(0, 20).map(val => 
                 `<option value="${val}">${val.length > 20 ? val.substring(0, 20) + '...' : val}</option>`
             ).join('');
             return `
-                <select onchange="updateFilter('${header}', 'value', this.value)">
+                <select onchange="updateFilterOptimized('${header}', 'value', this.value)">
                     <option value="">Todos</option>
                     ${options}
                 </select>
@@ -398,13 +516,13 @@ function createFilterControls(header, filterType) {
         default: // text
             return `
                 <input type="text" placeholder="Buscar..." 
-                       onchange="updateFilter('${header}', 'contains', this.value)">
+                       onchange="updateFilterOptimized('${header}', 'contains', this.value)">
             `;
     }
 }
 
-// Atualizar filtro
-function updateFilter(header, type, value) {
+// Atualizar filtro com debouncing
+function updateFilterOptimized(header, type, value) {
     if (!filters[header]) {
         filters[header] = {};
     }
@@ -418,11 +536,78 @@ function updateFilter(header, type, value) {
         filters[header][type] = value;
     }
     
-    applyFilters();
+    // Debounce para evitar muitas aplicações de filtro
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        applyFiltersOptimized();
+    }, 300);
 }
 
-// Aplicar filtros
-function applyFilters() {
+// Aplicar filtros otimizados
+function applyFiltersOptimized() {
+    // Usar Web Worker para filtros pesados
+    if (csvData.length > 10000 && window.Worker) {
+        applyFiltersWithWorker();
+    } else {
+        applyFiltersInMainThread();
+    }
+}
+
+function applyFiltersWithWorker() {
+    const worker = new Worker(URL.createObjectURL(new Blob([`
+        self.onmessage = function(e) {
+            const { data, filters } = e.data;
+            
+            try {
+                const filtered = data.filter(row => {
+                    return Object.keys(filters).every(header => {
+                        const filter = filters[header];
+                        const value = row[header];
+                        
+                        return Object.keys(filter).every(type => {
+                            switch (type) {
+                                case 'contains':
+                                    return value.toLowerCase().includes(filter[type].toLowerCase());
+                                case 'min':
+                                    return parseFloat(value) >= parseFloat(filter[type]);
+                                case 'max':
+                                    return parseFloat(value) <= parseFloat(filter[type]);
+                                case 'start':
+                                    return new Date(value) >= new Date(filter[type]);
+                                case 'end':
+                                    return new Date(value) <= new Date(filter[type]);
+                                case 'value':
+                                    return value.toLowerCase() === filter[type].toLowerCase();
+                                default:
+                                    return true;
+                            }
+                        });
+                    });
+                });
+                
+                self.postMessage({ success: true, filtered });
+            } catch (error) {
+                self.postMessage({ success: false, error: error.message });
+            }
+        };
+    `], { type: 'application/javascript' })));
+    
+    worker.postMessage({ data: csvData, filters });
+    
+    worker.onmessage = function(e) {
+        if (e.data.success) {
+            filteredData = e.data.filtered;
+            displayExcelTableOptimized();
+            updateStatusBar();
+        } else {
+            console.error('Erro ao aplicar filtros:', e.data.error);
+            applyFiltersInMainThread();
+        }
+        worker.terminate();
+    };
+}
+
+function applyFiltersInMainThread() {
     filteredData = csvData.filter(row => {
         return Object.keys(filters).every(header => {
             const filter = filters[header];
@@ -449,7 +634,7 @@ function applyFilters() {
         });
     });
     
-    displayExcelTable();
+    displayExcelTableOptimized();
     updateStatusBar();
 }
 
@@ -468,49 +653,101 @@ function clearFilters() {
         }
     });
     
-    displayExcelTable();
+    displayExcelTableOptimized();
     updateStatusBar();
 }
 
-// Exibir tabela Excel
-function displayExcelTable() {
+// Exibir tabela Excel otimizada com virtualização
+function displayExcelTableOptimized() {
     const tableHeader = document.getElementById('tableHeader');
-    const tableBody = document.getElementById('tableBody');
-    
-    console.log('Displaying table with', filteredData.length, 'rows');
     
     // Criar cabeçalhos
     tableHeader.innerHTML = headers.map((header, index) => 
         `<th data-col="${index}" title="${header}">${header.length > 15 ? header.substring(0, 15) + '...' : header}</th>`
     ).join('');
     
-    // Criar linhas de dados (limitado a 1000 linhas para performance)
-    const displayData = filteredData.slice(0, 1000);
-    tableBody.innerHTML = displayData.map((row, rowIndex) => 
-        `<tr data-row="${rowIndex}">${headers.map((header, colIndex) => {
-            const value = row[header] || '';
-            const cellClass = getCellClass(header, value);
-            return `<td class="${cellClass}" data-row="${rowIndex}" data-col="${colIndex}" onclick="selectCell(this)" title="${escapeHtml(value)}">${escapeHtml(value.length > 20 ? value.substring(0, 20) + '...' : value)}</td>`;
-        }).join('')}</tr>`
-    ).join('');
+    // Configurar virtualização
+    totalRows = filteredData.length;
+    startIndex = 0;
+    endIndex = Math.min(visibleRows, totalRows);
     
+    // Configurar altura do container para scroll virtual
+    if (tableBody) {
+        tableBody.style.height = `${totalRows * rowHeight}px`;
+    }
+    
+    renderVisibleRows();
     updateStatusBar();
 }
 
-// Obter classe da célula baseada no tipo de dados
-function getCellClass(header, value) {
-    const filterType = detectFilterType(header);
+// Renderizar apenas linhas visíveis
+function renderVisibleRows() {
+    if (!tableBody) return;
     
-    switch (filterType) {
-        case 'numeric':
-            return 'cell-number';
-        case 'date':
-            return 'cell-date';
-        case 'boolean':
-            return `cell-boolean ${value.toLowerCase()}`;
-        default:
-            return '';
+    tableBody.innerHTML = '';
+    
+    for (let i = startIndex; i < endIndex; i++) {
+        if (i >= filteredData.length) break;
+        
+        const row = filteredData[i];
+        const rowElement = document.createElement('tr');
+        rowElement.style.position = 'absolute';
+        rowElement.style.top = `${i * rowHeight}px`;
+        rowElement.style.left = '0';
+        rowElement.style.right = '0';
+        rowElement.dataset.row = i;
+        
+        rowElement.innerHTML = headers.map((header, colIndex) => {
+            const value = row[header] || '';
+            const cellClass = getCellClass(header, value);
+            return `<td class="${cellClass}" data-row="${i}" data-col="${colIndex}" onclick="selectCell(this)" title="${escapeHtml(value)}">${escapeHtml(value.length > 20 ? value.substring(0, 20) + '...' : value)}</td>`;
+        }).join('');
+        
+        tableBody.appendChild(rowElement);
     }
+}
+
+// Handle scroll para virtualização
+function handleScroll(event) {
+    const scrollTop = event.target.scrollTop;
+    const containerHeight = event.target.clientHeight;
+    
+    // Calcular índices visíveis
+    startIndex = Math.floor(scrollTop / rowHeight);
+    endIndex = Math.min(startIndex + Math.ceil(containerHeight / rowHeight) + 5, totalRows);
+    
+    // Renderizar apenas linhas visíveis
+    renderVisibleRows();
+}
+
+// Alternar visibilidade dos filtros
+function toggleFilters() {
+    const hiddenFilters = document.querySelectorAll('.hidden-filter');
+    const expandButton = document.querySelector('.expand-button button');
+    
+    if (filtersExpanded) {
+        // Colapsar
+        hiddenFilters.forEach(filter => filter.style.display = 'none');
+        expandButton.innerHTML = `<i class="fas fa-chevron-down"></i> Mostrar ${hiddenFilters.length} filtros mais`;
+        filtersExpanded = false;
+    } else {
+        // Expandir
+        hiddenFilters.forEach(filter => filter.style.display = 'flex');
+        expandButton.innerHTML = `<i class="fas fa-chevron-up"></i> Ocultar filtros extras`;
+        filtersExpanded = true;
+    }
+}
+
+// Obter label do tipo de filtro
+function getFilterTypeLabel(filterType) {
+    const labels = {
+        'text': 'Texto',
+        'numeric': 'Número',
+        'date': 'Data',
+        'boolean': 'Sim/Não',
+        'category': 'Categoria'
+    };
+    return labels[filterType] || 'Texto';
 }
 
 // Selecionar célula
@@ -603,40 +840,83 @@ function showExcelInterface() {
     statusBar.style.display = 'flex';
 }
 
-// Exportar para CSV
+// Exportar para CSV otimizado
 function exportToCSV() {
     if (filteredData.length === 0) {
         alert('Nenhum dado para exportar.');
         return;
     }
     
-    console.log('Exportando dados filtrados:', filteredData.length, 'linhas');
-    console.log('Headers:', headers);
-    console.log('Primeira linha filtrada:', filteredData[0]);
+    // Usar Web Worker para exportação de arquivos grandes
+    if (filteredData.length > 50000 && window.Worker) {
+        exportWithWorker();
+    } else {
+        exportInMainThread();
+    }
+}
+
+function exportWithWorker() {
+    const worker = new Worker(URL.createObjectURL(new Blob([`
+        self.onmessage = function(e) {
+            const { headers, data } = e.data;
+            
+            try {
+                const separator = ',';
+                const csvContent = [
+                    headers.map(header => \`"\${header}"\`).join(separator),
+                    ...data.map(row => 
+                        headers.map(header => {
+                            const value = row[header] || '';
+                            const escapedValue = value.toString().replace(/"/g, '""');
+                            return \`"\${escapedValue}"\`;
+                        }).join(separator)
+                    )
+                ].join('\\n');
+                
+                const BOM = '\\uFEFF';
+                const contentWithBOM = BOM + csvContent;
+                
+                self.postMessage({ success: true, content: contentWithBOM });
+            } catch (error) {
+                self.postMessage({ success: false, error: error.message });
+            }
+        };
+    `], { type: 'application/javascript' })));
     
-    // Usar vírgula como separador e adicionar aspas em todos os campos
+    worker.postMessage({ headers, data: filteredData });
+    
+    worker.onmessage = function(e) {
+        if (e.data.success) {
+            downloadCSV(e.data.content);
+        } else {
+            console.error('Erro na exportação:', e.data.error);
+            exportInMainThread();
+        }
+        worker.terminate();
+    };
+}
+
+function exportInMainThread() {
     const separator = ',';
-    console.log('Separador para exportação: COMMA');
-    
     const csvContent = [
         headers.map(header => `"${header}"`).join(separator),
         ...filteredData.map(row => 
             headers.map(header => {
                 const value = row[header] || '';
-                // Escapar aspas duplas e adicionar aspas em todos os campos
                 const escapedValue = value.toString().replace(/"/g, '""');
                 return `"${escapedValue}"`;
             }).join(separator)
         )
     ].join('\n');
     
-    console.log('CSV Content preview:', csvContent.substring(0, 500));
-    
-    // Adicionar BOM (Byte Order Mark) para melhor compatibilidade com Excel
     const BOM = '\uFEFF';
     const contentWithBOM = BOM + csvContent;
     
-    const blob = new Blob([contentWithBOM], { type: 'text/csv;charset=utf-8;' });
+    downloadCSV(contentWithBOM);
+}
+
+function downloadCSV(content) {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
@@ -646,9 +926,6 @@ function exportToCSV() {
     link.click();
     document.body.removeChild(link);
     
-    console.log('Exportação concluída');
-    
-    // Mostrar instruções para o usuário
     setTimeout(() => {
         const instructions = `
 📋 **Arquivo CSV Exportado com Sucesso!**
@@ -680,29 +957,6 @@ Para abrir corretamente no Excel:
     }, 500);
 }
 
-// Detectar separador usado no arquivo original
-function detectSeparator() {
-    if (csvData.length > 0) {
-        // Verificar se o arquivo original usava tab ou vírgula
-        const firstRow = csvData[0];
-        const firstRowString = Object.values(firstRow).join('');
-        
-        // Se o arquivo original tinha tab, usar tab. Senão, usar vírgula
-        if (firstRowString.includes('\t')) {
-            return '\t';
-        }
-        
-        // Verificar se há vírgulas nos dados
-        const hasCommas = Object.values(firstRow).some(value => value.includes(','));
-        if (hasCommas) {
-            return '\t'; // Usar tab se há vírgulas nos dados
-        }
-        
-        return ',';
-    }
-    return ',';
-}
-
 // Funções auxiliares
 function isValidDate(value) {
     const date = new Date(value);
@@ -729,4 +983,31 @@ function showLoading() {
 
 function hideLoading() {
     loading.style.display = 'none';
+}
+
+function updateLoadingProgress(processed, total) {
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    
+    if (progressFill && progressText) {
+        const percentage = Math.round((processed / total) * 100);
+        progressFill.style.width = `${percentage}%`;
+        progressText.textContent = `${percentage}%`;
+    }
+}
+
+// Obter classe da célula baseada no tipo de dados
+function getCellClass(header, value) {
+    const filterType = detectFilterTypeOptimized(header);
+    
+    switch (filterType) {
+        case 'numeric':
+            return 'cell-number';
+        case 'date':
+            return 'cell-date';
+        case 'boolean':
+            return `cell-boolean ${value.toLowerCase()}`;
+        default:
+            return '';
+    }
 }
